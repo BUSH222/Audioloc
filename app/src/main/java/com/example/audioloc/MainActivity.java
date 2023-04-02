@@ -1,11 +1,11 @@
 package com.example.audioloc;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
+import java.util.Objects;
 import java.util.Scanner;
 import java.net.URL;
 import java.net.HttpURLConnection;
@@ -38,7 +38,6 @@ public class MainActivity extends Activity implements View.OnClickListener{
 
     WifiManager wifiManager;
     WifiScanReceiver wifiReciever;
-    ArrayList<String> wifis;
     WifiInfo wifiInfo;
     Map<String, String> BSSIDS = new HashMap<>();
     String currentfile;
@@ -66,7 +65,7 @@ public class MainActivity extends Activity implements View.OnClickListener{
         wifiInfo = wifiManager.getConnectionInfo();
         ErrorInThread = Boolean.FALSE;
 
-        wifis = new ArrayList<>();
+
         BSSIDS = new HashMap<>();
 
         currentfile = "nothing.mp3";
@@ -95,16 +94,10 @@ public class MainActivity extends Activity implements View.OnClickListener{
                 Scanner s = new Scanner(responseStream).useDelimiter("\\A");
                 response = s.hasNext() ? s.next() : "";
                 System.out.println(response);
-                wifis.clear();
                 BSSIDS.clear();
                 currentfile = response;
 
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Toast.makeText(getApplicationContext(), currentfile, Toast.LENGTH_SHORT).show();
-                    }
-                });
+                runOnUiThread(() -> Toast.makeText(getApplicationContext(), currentfile, Toast.LENGTH_SHORT).show());
 
 
 
@@ -186,32 +179,30 @@ public class MainActivity extends Activity implements View.OnClickListener{
         public void onReceive(Context c, Intent intent) {
             List<ScanResult> wifiScanList = wifiManager.getScanResults();
             BSSIDS.clear();
-            wifis.clear();
             Log.d("THETAG", "bruh scan");
             for (int i = 0; i < wifiScanList.size(); i++) {
-                String ssid = wifiScanList.get(i).SSID;
                 String bssid =  wifiScanList.get(i).BSSID;
                 int rssi =  wifiScanList.get(i).level;
-                wifis.add("SSID: " + ssid + "\nBSSID: " + bssid + "\nRSSI: " + rssi);
                 BSSIDS.put(bssid, String.valueOf(rssi));
             }
             EditText medit = findViewById(R.id.ipinput);
-            if (!medit.getText().toString().trim().equals("")) {
+            if (!medit.getText().toString().trim().equals("") && !BSSIDS.isEmpty()) {
                 mp = new MediaPlayer();
                 new Thread(DoRequest).start();
 
-                if (!(ErrorInThread == Boolean.FALSE || currentfile == "nothing.mp3")) {
+                if (!(ErrorInThread == Boolean.FALSE || Objects.equals(currentfile, "nothing.mp3"))) {
                     Toast.makeText(getApplicationContext(), "Something went wrong. Check the ip address.", Toast.LENGTH_LONG).show();
                     ErrorInThread = Boolean.FALSE;
                 }
-            } else {
+            } else if (medit.getText().toString().trim().equals("")){
                 Toast.makeText(getApplicationContext(), "The ip input field is blank", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(getApplicationContext(), "There are either no networks nearby or you are pressing play too quickly", Toast.LENGTH_LONG).show();
             }
 
             currentfile = "nothing.mp3";
             response = "nothing.mp3";
             BSSIDS.clear();
-            wifis.clear();
             Button pb = findViewById(R.id.playbutton);
             pb.setEnabled(false);
 
