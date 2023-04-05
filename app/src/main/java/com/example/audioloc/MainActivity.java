@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Map;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
-import java.util.Objects;
 import java.util.Scanner;
 import java.net.URL;
 import java.net.HttpURLConnection;
@@ -15,7 +14,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.res.AssetFileDescriptor;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.net.wifi.ScanResult;
@@ -37,10 +35,9 @@ public class MainActivity extends Activity implements View.OnClickListener{
 
 
     WifiManager wifiManager;
-    WifiScanReceiver wifiReciever;
+    WifiScanReceiver wifiReceiver;
     WifiInfo wifiInfo;
     Map<String, String> BSSIDS = new HashMap<>();
-    String currentfile;
     String response;
     Boolean ErrorInThread;
     private MediaPlayer mp;
@@ -61,14 +58,14 @@ public class MainActivity extends Activity implements View.OnClickListener{
 
 
         wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-        wifiReciever = new WifiScanReceiver();
+        wifiReceiver = new WifiScanReceiver();
         wifiInfo = wifiManager.getConnectionInfo();
         ErrorInThread = Boolean.FALSE;
 
 
         BSSIDS = new HashMap<>();
 
-        currentfile = "nothing.mp3";
+        response = "nothing.mp3";
 
     }
 
@@ -95,17 +92,9 @@ public class MainActivity extends Activity implements View.OnClickListener{
                 response = s.hasNext() ? s.next() : "";
                 System.out.println(response);
                 BSSIDS.clear();
-                currentfile = response;
-
-                runOnUiThread(() -> Toast.makeText(getApplicationContext(), currentfile, Toast.LENGTH_SHORT).show());
-
-
-
+                runOnUiThread(() -> Toast.makeText(getApplicationContext(), response, Toast.LENGTH_SHORT).show());
                 mp.reset();
-                AssetFileDescriptor afd;
-                afd = getAssets().openFd(currentfile);
-
-                mp.setDataSource(afd.getFileDescriptor(),afd.getStartOffset(),afd.getLength());
+                mp.setDataSource("http://"+medit.getText().toString()+"/getaudio/"+response);
                 mp.prepare();
                 mp.start();
 
@@ -163,13 +152,13 @@ public class MainActivity extends Activity implements View.OnClickListener{
 
 
     protected void onPause() {
-        unregisterReceiver(wifiReciever);
+        unregisterReceiver(wifiReceiver);
 
         super.onPause();
     }
 
     protected void onResume() {
-        registerReceiver(wifiReciever, new IntentFilter(
+        registerReceiver(wifiReceiver, new IntentFilter(
                 WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
         super.onResume();
     }
@@ -190,7 +179,7 @@ public class MainActivity extends Activity implements View.OnClickListener{
                 mp = new MediaPlayer();
                 new Thread(DoRequest).start();
 
-                if (!(ErrorInThread == Boolean.FALSE || Objects.equals(currentfile, "nothing.mp3"))) {
+                if (ErrorInThread == Boolean.TRUE) {
                     Toast.makeText(getApplicationContext(), "Something went wrong. Check the ip address.", Toast.LENGTH_LONG).show();
                     ErrorInThread = Boolean.FALSE;
                 }
@@ -200,7 +189,6 @@ public class MainActivity extends Activity implements View.OnClickListener{
                 Toast.makeText(getApplicationContext(), "There are either no networks nearby or you are pressing play too quickly", Toast.LENGTH_LONG).show();
             }
 
-            currentfile = "nothing.mp3";
             response = "nothing.mp3";
             BSSIDS.clear();
             Button pb = findViewById(R.id.playbutton);
